@@ -1,0 +1,4 @@
+node_modules/
+config-app.js
+.gitignore
+.DS_Store

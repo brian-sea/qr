@@ -1,0 +1,33 @@
+mixin navStyle 
+    link(rel='stylesheet' href=`${baseURL}/css/nav.css`)
+
+mixin signup
+    div(class='signinBtns') 
+        if authProviders && Object.keys(authProviders).length > 0
+            span Sign in with: 
+            span
+                each options,provider in authProviders
+                    a(href=`${baseURL}/auth/${provider}`)
+                        img(src=`${baseURL}/images/${provider}_login.svg` title=`${options.name}` alt=`${options.name}`)
+
+mixin configMenuScript 
+    script(type='text/javascript' src=`${baseURL}/js/nav.js`)
+
+mixin configMenu
+    input(type='checkbox' id='configToggle') 
+    label(for='configToggle' onclick='if(!document.getElementById("configToggle").checked) document.querySelector("input#adminPassword").focus();')
+    div(class='configMenu') 
+        form( id='formPassword' onsubmit='checkAdminPassword(event);')
+            div(class='unauthPassword')
+                button &#x1F512;
+                span(class='passwords')
+                    input(id='adminPassword' placeholder=' ' type='password' name='checkPassword')
+                    label(for='adminPassword') Password
+        if permissions.logins.length > 0
+            form( onsubmit='logoutUser(event)')
+                div(class='authLogins') Logged In As:
+                    each login in permissions.logins
+                        div
+                            button(value=`${login.provider}:${login.username}`) &#x26D4;
+                            span= login.providerLabel
+                            div(style='padding-top: 0.5em; margin-left: 0.5em;')= login.username

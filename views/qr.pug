@@ -1,0 +1,1436 @@
+- var adminModeOn = (permissions.admin)?'adminmode':'';
+- var loggedInMode = (permissions.name)?'loggedIn':'';
+- var loggedInUserID = (permissions.logins.length > 0)?permissions.logins[0].name:'';
+
+- var port = (config.port) ? ':'+config.port : '';
+
+
+include nav.pug 
+
+doctype html
+html
+    head
+        meta(charset='UTF-8')
+        meta(name='viewport' content='width=device-width, initial-scale=1')
+
+        title= `Qr -- ${queueID}`
+
+        +navStyle
+
+        style(type='text/css').
+            *{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            :root {
+                --primary-bgcolor: rgba(32, 80, 203, 1);
+                --primary-fgcolor: rgba(255,255,255, 0.8);
+                --list-separator-color: rgba(33, 33, 69, 0.2);
+                --dropzone-color: rgba(29, 118, 201, 1);
+            }
+
+            input, textarea {
+                border-radius: 10px;
+            }
+
+            a:visited, a:link {
+                color: black;
+            }
+
+            div.queueHeader {
+                display: flex;
+                align-items: center;
+
+                font-size: 1.5rem;
+                font-weight: bold;
+
+                padding-left: 0.5em;
+                padding-top: 0.5em;
+
+                color: white;
+                background-color: var(--primary-bgcolor);
+            }
+            span.queueTitle {
+                display: flex;
+                align-items: center;
+                padding-left: 0.5em;
+                flex-grow: 1;
+            }
+
+            ul.requestList {
+                list-style: none;
+
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+            ul.requestList > li.requestItem.adminmode {
+                cursor: move;
+            }
+
+            div.requestContent{
+                display: flex;
+                flex-direction: column;
+                padding: 0.5em;
+                border-top: 2px dashed var(--list-separator-color);
+                border-bottom: 2px dashed var(--list-separator-color);
+            }
+            div.requestContent > input[type='checkbox']{
+                display: none;
+            }
+            div.requestContent > div.additionalInfo {
+                background-color: #A7A7A7;
+                padding: 0.5em;
+            }
+            label.requestHeader {
+                display: flex;
+                align-items: center;
+            }
+            div.studentName{
+                display: flex;
+                align-items: center;
+                flex-grow: 1;
+            }
+            span.dragHandle{
+                margin-left: 0.25em;
+                font-size: 2rem;
+                opacity: 0;
+                transition: opacity 250ms ease-in-out, padding 250ms ease-in-out, max-width 250ms ease-in-out;
+            }
+            span.dragHandle.adminmode {
+                cursor: move;
+                opacity: 1;
+            }
+
+            span.deletebtn{
+                font-size: 1.25rem;
+                margin-right: 0.5em;
+                opacity: 0;
+                
+                padding: 0.15em;
+            }
+           
+            .requestGutter {
+               height: 0;
+               transition: height 150ms ease-in-out;
+            }
+            .requestGutter.enable{
+                background-color: var(--dropzone-color);
+                border: 2px dashed var(--list-separator-color);
+                height: 20px;
+            }
+            .requestGutter.enable.active{
+                background-color: green;
+                border-style: solid;
+            }
+            .admincontrols {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                overflow: hidden;
+                margin-right: 0.5em;
+                font-size: 1.25rem;
+                border: 1px solid black;
+                min-width: 42px;
+                max-width: 0;
+                min-height: 42px;
+
+                opacity: 0;
+                pointer-events: none;
+                transition: max-width 150ms ease-in-out, opacity 150ms ease-in-out;
+            }
+            .admincontrols.adminmode {
+                max-width: 100vw;
+                opacity: 1;
+                pointer-events: all;
+                cursor: pointer;
+            }
+            div#messageBox{
+                max-height: 100vh;
+                background-color: rgba(255,255,0,0.5);
+            }
+
+             div.dialog {
+                position: absolute;
+                display: none;
+
+                background-color: white;
+                border: 2px solid black;
+
+                top: 0;
+                right: 0;
+                bottom: 0;
+                left: 0;
+                background-color: rgba(0,0,0,0.7);
+            }
+            div.dialog.enable {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            div.dialogWindow {
+                background-color: white;
+                min-width: max(10rem, 50vw);
+                padding: 0.25em;
+
+                border-radius: 10px;
+            }
+
+            div.dialogHeader {
+                background-color: var(--primary-bgcolor);
+                color: var(--primary-fgcolor);
+                font-weight: bold;
+
+                display: flex;
+                justify-content: center;
+                padding: 0.5em;
+
+                border-radius: 10px;
+            }
+            div.dialogContent {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 0.5em;
+            }
+            div.dialogContent > div {
+                width: 100%;
+            }
+            div.dialogOptions {
+                display: flex;
+                align-items: center;
+                justify-content: space-around;
+                font-size: 1.25rem;
+                margin-top: 1em;
+            }
+            div.dialogOptions > input[type='submit']{
+                min-width: 40%;
+                min-height: 42px;
+                background-color: var(--primary-bgcolor);
+                color: var(--primary-fgcolor);
+                padding: 0.5em;
+                border: 1px solid black;
+            }
+
+            div.numberSpinner{
+                display: flex;
+                justify-content: center;
+            }
+            div.numberSpinner > input[type='number']{
+                font-size: 1.5rem;
+                max-width: 5em;
+                text-align: center;
+                padding: 0;
+            }
+
+            /* Remove the arrows from the number spinners */
+            /* Chrome, Safari, Edge, Opera */
+            div.numberSpinner.js > input::-webkit-outer-spin-button,
+            div.numberSpinner.js > input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
+            /* Firefox */
+            div.numberSpinner.js > input[type='number'] {
+                -moz-appearance:textfield;
+            }
+
+            div.numberSpinner > button {
+                background-color: var(--primary-bgcolor);
+                color: var(--primary-fgcolor);
+                font-size: 1.5rem;
+                font-weight: bold;
+                min-width: 42px;
+                min-height: 42px;
+                display: none;
+            }
+            div.infoMessage {
+                padding: 0.5em;
+                border-bottom: 1px dotted black;
+            }
+
+            span.qrcode {
+                display: inline-block;
+            }
+            span.qrcode > img {
+                width: 50px;
+                height: 50px;
+            }  
+            span.qrcode:active > img {
+                transform: scale(4) translate(100%, 100%);
+            }
+
+            div.requestReason{
+                padding: 0.5em;
+                padding-bottom: 0;
+                display: flex;
+                align-items: flex-start;
+            }
+
+            div.requestName{
+                display: flex;
+                flex-direction: column-reverse;
+            }
+            div.requestName > button {
+                -webkit-appearance: none;
+
+                width:95%;
+
+                background-color: lightgray;
+                border: 1px solid black;
+                margin: auto;
+                min-height: 48px;
+                cursor: pointer;
+            }
+
+            div.signinBtns{
+                display: flex;
+                align-items:center;
+                overflow: hidden;
+                max-height: 75px;
+                padding-left: 10px;
+                transition: max-height 250ms ease-in-out;
+            }
+
+            div.requestInputs{
+                display: flex;
+                flex-wrap: wrap;
+                gap: 1em;
+                padding: 10px;
+            }
+            div.requestInputs > * {
+                flex-grow: 1;
+                min-height: 48px;
+            }
+            span.passwords {
+                position: relative;
+                display: inline-flex;
+
+                border: 1px solid black;
+                border-radius: 10px;
+                align-items:center;
+            }
+
+            span.passwords > input {
+                flex-grow: 2;
+                border: 0;
+                min-height: 48px;
+                padding-left: 0.25rem;
+            }
+
+            span.reasonarea{
+                position: relative;
+                outline: 1px solid black;
+                padding-top: 0.75em;
+                flex-grow: 4;
+
+                border-radius: 10px;
+            }
+
+            input:focus, button:focus {
+                outline: 2px solid var(--primary-bgcolor);
+            }
+
+            span.passwords:focus-within,
+            span.reasonarea:focus-within{
+                outline: 2px solid var(--primary-bgcolor);
+            }
+            span.passwords > input:focus{
+                outline: none;
+            }
+
+            div.requestName button[name='login']{
+                position: relative;
+                transition: background-color 150ms ease-in-out;
+            }
+
+            span.passwords > input:focus + label,
+            span.passwords > input:not(:placeholder-shown) + label,
+            span.reasonarea > textarea:focus + label,
+            span.reasonarea > textarea:not(:placeholder-shown) + label
+             {
+                font-size: 0.85rem;
+                transform: translate( 1ch, -2.75rem);
+                color: black;
+                background-color: white;
+            }
+            span.passwords > label,
+            span.reasonarea > label {
+                color: gray;
+                left: 0.5rem;
+                top: 50%;
+                opacity: 1;
+                padding: 2px;
+                transform: translate(1ch, -50%);
+                position: absolute;
+                pointer-events: none;
+                transition: font-size 250ms ease-in-out, transform 250ms ease-in-out, color 250ms ease-in-out, background-color 250ms ease-in-out;
+            }
+
+            span.reasonarea > textarea {
+                padding: 5px;
+                outline: none;
+                resize: none;
+                border: 0;
+                width:100%;
+            }
+
+         
+            button[name='login']{
+                min-width: 48px;
+                min-height: 48px;
+                flex-grow: 0;
+                font-size: 1.5rem;
+                padding: 0;
+            }
+            input[name='requestbtn']{
+                min-height: 48px;
+                margin: 5px;
+            }
+
+            form.requestHelp{
+                position: fixed;
+                padding-top: 0.25em;
+
+                /*box-shadow: 0em -0.5em black;*/
+                border-top: 2px solid black;
+
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: white;
+            }
+
+            label.userTextInput {
+                display: inline-flex;
+                flex-direction: column;
+
+                justify-content: center;
+                position: relative;
+                margin-top: 1em;
+                width: 100%;
+            }
+            label.userTextInput > textarea,
+            label.userTextInput > input {
+                border: 1px solid black;
+                padding: 0.5em;
+            }
+            label.userTextInput > span{
+                position: absolute;
+                left: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                padding: 3px;
+
+                color: gray;
+                transition: top 100ms ease-in-out, font-size 100ms ease-in-out;
+            }
+            label.userTextInput > input:focus + span,
+            label.userTextInput > input:not(:placeholder-shown) + span,
+            label.userTextInput > textarea:focus + span,
+            label.userTextInput > textarea:not(:placeholder-shown) + span{
+                top: -0.25em;
+                background: white;
+                color: black;
+                font-size: 0.75rem;
+            }
+
+            label.userSwitchInput {
+                
+                --thumb-size: 1.25rem;
+                --track-size: calc(var(--thumb-size) * 2 );
+                --track-padding: 2px;
+
+                display: flex;
+                align-items: center;
+                gap: 2ch;
+
+                border: none;
+                outline-offset: 5px;
+
+                cursor: pointer;
+                user-select: none;
+            }
+            label.userSwitchInput > input {
+                --thumb-position: 0%;
+
+                appearance: none;
+                inline-size: var(--track-size);
+                block-size: calc(var(--thumb-size) * 1.25);
+                border-radius: var(--track-size);
+                padding: var(--track-padding);
+
+                flex-shrink: 0;
+                display: grid;
+                align-items: center;
+                grid: [track] 1fr / [track] 1fr;
+
+                background: var(--primary-fgcolor);
+                border: 1px solid black;
+                cursor: pointer;
+
+                transition: background 250ms ease-in-out;
+            }
+            label.userSwitchInput > input:focus {
+                outline: none;
+            }
+            label.userSwitchInput > input:checked {
+                --thumb-position: calc(var(--track-size) - 100% - 3 * var(--track-padding));
+                background: lime;
+            }
+            label.userSwitchInput > input::before {
+                content: "";
+                grid-area: track;
+                inline-size: var(--thumb-size);
+                block-size: var(--thumb-size);
+                border-radius: 50%;
+
+                background: var(--primary-bgcolor);
+                transform: translateX(var(--thumb-position));
+                transition: flex-basis 250ms ease-in-out;
+            }
+
+            div#PollingDialog input[name='freeResponse']:checked + div.additionalOptions {
+                flex: 1 1 100%;
+                max-height: 0vh;
+                transition: max-height 250ms ease-in-out;
+            }
+            div#PollingDialog input[name='freeResponse'] + div.additionalOptions {
+                flex: 1 1 100%;
+                max-height: 20vh;
+                transition: max-height 250ms ease-in-out;
+            }
+
+            div#PollingDialogProgress div.pollQuestion {
+                font-size: 1.5rem;
+
+                padding: 0.25em;
+                padding-bottom: 0.75em;
+                border-bottom: 2px dashed black;
+            }
+            div#PollingDialogProgress div.answers {
+                display: flex;
+                flex-wrap: wrap;
+
+                align-items: center;
+                justify-content: space-evenly;
+                padding: 1em;
+                gap: 0.5em;
+            }
+            div#PollingDialogProgress div.answers > label{
+                display: flex;
+                gap: 0.25em;
+                padding: 0.5em;
+                cursor: pointer;
+
+            }
+            div#PollingDialogProgress div.answers > label:hover{
+                outline: 2px solid black;
+                background-color: lightgray;
+            }
+            div#PollingDialogProgress div.gatheredAnswers {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5em;
+                width: 100%;
+
+                max-height: 50vh;
+                overflow-y: auto;
+            }
+            div#PollingDialogProgress div.gatheredAnswers > div {
+                width: 100%;
+                border-bottom: 1px dashed black;
+                padding: 0.5em;
+            }
+            div#PollingDialogProgress div.gatheredAnswers > div:hover {
+                background-color: lightgray;
+            }
+
+
+            input.requestExpander + label::before {
+                content: '\25B6';
+                padding: 0.25em;
+            }
+            input.requestExpander + label + div.additionalInfo{
+                display: none;
+            }
+            input.requestExpander:checked + label::before {
+            
+                content: '\25BC';
+            }
+            input.requestExpander:checked + label + div.additionalInfo{
+                display: block;
+            }
+
+
+            +signupStyle
+            +sliderStyle            
+
+    body
+        div(id='messageBox')
+
+        +configMenu
+
+        form(class=`requestHelp` onsubmit='enqueue(event);')
+            div(class='requestName')
+                button(name='requestbtn' tabindex='3' placeholder=' ') Submit Request
+                div(class='requestInputs')
+                    span(class='passwords')
+                        input(name='requester' type='text' tabindex='1' placeholder=' ' value=loggedInUserID)
+                        label Name
+                    
+                    span(class='reasonarea')
+                        textarea(name='reason' tabindex='2' placeholder=' ')
+                        label Reason or Question
+
+
+            +signup
+
+        div(class='queueHeader')
+            span(class='qrcode')
+                img(src=`${qrcode}`)
+            span(class='queueTitle') Queue
+            span(class='admincontrols')
+                span(class='pollingControl' onclick='document.getElementById("PollingDialog").parentNode.classList.toggle("enable");')
+                    label &#128499;
+        div(class='dialog')
+            div(class='dialogWindow' id='PollingDialog')
+                form(onsubmit='startPoll(event)')
+                    div(class='dialogHeader') Poll Users 
+                    div(class='dialogContent')
+                        div
+                            label(class='userTextInput')
+                                textarea(name='question' placeholder=' ')
+                                span Question
+                        div
+                            label(class='userSwitchInput' style='align-items:flex-start; padding-top: 10px;') 
+                                span Free Response
+                                input(type='checkbox' name='freeResponse' checked='checked')
+                                div(class='additionalOptions' style='overflow-y:auto; flex-basis:100%;')
+                                    label(class='userSwitchInput') 
+                                        span Multiple Selections
+                                        input(type='checkbox' name='multiple')
+                                    div
+                                        label(class='userTextInput')
+                                            input(name='answer1' placeholder=' ' autocomplete='off' onkeydown='if( event.which === 13) { event.preventDefault(); addAnswer(event);}')
+                                            span Answer
+                                        label(class='userSwitchInput' style='margin-bottom:0.75em;') Correct
+                                            input(type='checkbox' name='correctAnswer')
+                                    span
+                                        span(onclick='addAnswer(event)') + Add Another Answer                                    
+                                        input(value='1' type='hidden' name='numAnswers' )
+                                                        
+                    div(class='dialogOptions')
+                        a(href="" onclick='event.preventDefault(); event.target.closest("div.dialog").classList.remove("enable")') Cancel
+                        input(type='submit' name='pollbtn' value='Start Poll')
+
+        div(class='dialog')
+            div(class='dialogWindow' id='PollingDialogProgress')
+                form
+                    input(type='hidden' name='uuid' value='')
+                    div(class='dialogHeader') Polling Started...
+                    div(class='dialogContent')
+                        div(class='pollQuestion') Question
+                        div(class='answers')
+                                                        
+                    div(class='dialogOptions')
+                        a(href="" onclick='event.preventDefault(); event.target.closest("div.dialog").classList.remove("enable")') Cancel
+                        input(type='submit' name='votebtn' value='Vote!' onclick='castVote(event, "vote");')
+                        input(type='submit' name='endpollbtn' value='End Poll' onclick='castVote(event,"endpoll");' style='display:none;')
+                    
+
+        ul(class='requestList')
+            if(permissions.access === true)
+                each requester, index in requesters
+                    li(class='requestItem' data-uuid=`${requester.uuid}`)
+                        div(class='requestGutter')
+                        div(class='requestContent')
+                            if( requester.reason.length > 0 )
+                                input(class='requestExpander' id=`requestExpander-${requester.uuid}` type='checkbox')
+                            label( for=`requestExpander-${requester.uuid}` class='requestHeader')
+                                span(class=`${adminModeOn} admincontrols dragHandle`) &equiv;
+                                div(class='studentName')= requester.name
+                                span(class=`${adminModeOn} admincontrols blockbtn` onclick='showBlockDialog(event);') &#x1f6ab;
+                                span(class=`${adminModeOn} admincontrols deletebtn` onclick=`deleteSpot(event, '${requester.uuid}')`) X
+                            div(class='additionalInfo')= requester.reason
+            li(class='requestItem')
+                div(class='requestGutter')
+
+
+        
+
+        div(class='dialog' id='blockDialog')
+            div(class='dialogWindow')
+                div(class='dialogHeader') Block User
+                form(id='blockUser' method='post' onsubmit='blockUser(event);')
+                    input(type='hidden' name='uuid' value='' )
+                    div(class='dialogContent')
+                        div(style='width: 100%;border-bottom: 1px dashed black; margin-bottom: 20px; padding-bottom: 10px;')
+                            div Ban By
+                            div 
+                                input( id='IDDetailsBan' type='checkbox' name='banID' checked=checked)
+                                label( for='IDDetailsBan' ) 
+                                    span Identities:
+                                    div(class='idDetails')
+                            div(style='margin-top: 10px;') 
+                                input(id='IPDetailsBan' type='checkbox' name='banIP')
+                                label(for='IPDetailsBan') 
+                                    span IP: 
+                                    span(class='ipDetails')
+                        span(class='reasonarea' style='width:100%;margin-bottom: 10px;')
+                            textarea( id='reasonquestion' name='reason' placeholder=' ')
+                            label(for='reasonquestion') Reason
+                        span Minutes 
+                        div(class='numberSpinner')
+                            button(onclick='event.preventDefault(); this.nextElementSibling.stepDown(1);') -
+                            input(name='duration' type='number' step='1' min='0' max='240' value='0')
+                            button(onclick='event.preventDefault(); this.previousElementSibling.stepUp(1);') +
+                    div(class='dialogOptions')
+                        a(href="" onclick='event.preventDefault(); event.target.closest("div.dialog").classList.remove("enable")') Cancel
+                        input(type='submit' name='blockbtn' value='Block User')
+ 
+        +configMenuScript
+        script(src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js')
+        script(type='text/javascript').
+            let adminMode = !{adminModeOn !== ''};
+            let loggedIn = !{loggedInMode !== '' };
+            let userID = '!{loggedInUserID}';
+
+            let pollStarted = null;
+            let pollActive = null;
+
+            let blockedTimer = null;
+            let blockedUntil = -1;
+            
+            let serverURL = `${window.location.origin}`
+            let qName = window.location.pathname.split('/');
+            qName = qName[qName.length-1];
+            
+            let socket = io(serverURL, {
+               transports: ['websocket', 'polling']
+            });
+            socket.on('connect', function(){
+                const params = new URLSearchParams(window.location.search);  
+                let name = params.get("access") || '';
+                if( userID ){
+                    name = userID;
+                }
+                socket.emit('qr:queue:join', qName, name, toggleQueueAccess)
+            })
+
+            function addInfoMessage( msg, removemSecs = 5000, bgcolor = 'yellow' ){
+                let msgBlock = document.getElementById('messageBox');
+                let message = document.createElement('div');
+                message.classList.add('infoMessage')
+                message.innerText = msg;
+                message.style.backgroundColor = bgcolor;
+                messageBox.appendChild(message);
+
+                if( removemSecs > 0 ){
+                    setTimeout(function() {
+                        messageBox.removeChild(message);
+                    }, removemSecs)
+                }
+            }
+
+            function init(){
+
+                // UI Customizations for number spinners
+                // Only if JavaScript is available
+                let numberSpinners = document.getElementsByClassName('numberSpinner');
+                for( let ns of numberSpinners ){
+                    let buttons = ns.getElementsByTagName('button')
+                    for( let button of buttons ){
+                        button.style.display = 'inline-block';
+                    }
+                    ns.classList.add('js');
+                }
+
+                // Reset the number of answers
+                document.querySelector('div#PollingDialog input[name="numAnswers"]').value = 1;
+
+                // Pressing esc closes dialogs or the config menu
+                let dialogs = [
+                    document.querySelector('div#blockDialog'),
+                    document.querySelector('div#PollingDialog').parentNode
+                ];
+                let configToggle = document.querySelector('input#configToggle');
+                
+                document.addEventListener('keydown', function(event){
+                    if( event.which === 27 ) {
+                        configToggle.checked = false;
+                        for(let dialog of dialogs ){
+                            dialog.classList.remove('enable');
+                        }
+                    }
+                })
+            }
+
+            function nameFocus(event) {
+                event.target.setSelectionRange(0, event.target.value.length)
+            }
+
+            function addAnswer(event){
+                
+                event.preventDefault();
+                event.stopPropagation();
+
+                //let answerNumber = parseInt(event.target.nextSibling.value) + 1;
+
+                let container = event.target.closest('div.additionalOptions');
+                let ansNumInput = container.lastElementChild.querySelector('input[name="numAnswers"]');
+                let answerNumber = parseInt(ansNumInput.value) + 1;
+
+
+                let newAnswer = container.firstChild.nextSibling.cloneNode(true);
+                let newAnswerInput = newAnswer.querySelector('input')
+                newAnswerInput.name = 'answer'+answerNumber;
+                newAnswerInput.value = '';
+                
+                ansNumInput.value = answerNumber
+
+                container.insertBefore(newAnswer, container.lastChild)
+                container.scrollTop = container.scrollHeight;
+                newAnswerInput.focus();
+            }
+
+            function startPoll(event){
+                event.preventDefault();
+                
+                if( !adminMode ){
+                    return;
+                }
+
+                let pollingForm = event.target.elements;
+
+                let question = pollingForm['question'].value;
+                let numAnswers = parseInt( pollingForm['numAnswers'].value);
+                let multipleAnswers = (pollingForm['multiple'].checked) ? true : false;
+
+                let answers = [];
+
+                if( !pollingForm['freeResponse'].checked ) {
+                    for( let i = 1; i <= numAnswers; i++ ) {
+                        if( pollingForm['answer'+i].value && pollingForm['answer'+i].value.trim().length > 0 ){
+                            answers.push( pollingForm['answer'+i].value);
+                        }
+                        else {
+                            break;
+                        }
+                    }
+                }
+
+                let pollData = {
+                    question,
+                    answers,
+                    multipleAnswers
+                }
+
+                socket.emit('qr:poll:create',pollData, function(ackData){
+                    if( ackData.status) {
+                        socket.emit('qr:poll:start', {
+                            uuid: ackData.message
+                        }, function(msg){
+                            if( msg.status === true ) {
+                                pollStarted =  msg.id
+                            }
+                            else {
+                                addInfoMessage(msg.message);
+                            }
+                        })
+                    }
+                })
+            }
+
+            function castVote(evt, action){
+                evt.preventDefault();
+
+                if( action=== 'endpoll' && pollStarted !== null ){
+                    let data = {
+                        uuid: pollStarted
+                    }
+
+                    socket.emit('qr:poll:end', data, function(data){
+                        if( data.status === false ){
+                            addInfoMessage(data.message);
+                        }
+                        else{
+                            pollStarted = pollActive = null;
+                            let pollingDialog = document.querySelector('div#PollingDialogProgress')
+
+                            let pollingHeader = pollingDialog.querySelector('div.dialogHeader')
+                            let pollingButtons = pollingDialog.querySelectorAll('input[type="submit"')
+
+                            pollingHeader.innerText = 'Polling Ended'
+                            for( let button of pollingButtons ){
+                                button.style.display = 'none';
+                            }
+                        }
+                    })
+                }
+                else {
+                    let theForm = evt.target.closest('form');
+
+                    let answers = [];
+                    let votes = theForm.querySelectorAll('input:checked');
+                    for(let v of votes ){
+                        answers.push(v.value);
+                    }
+                    if( answers.length === 0 ){
+                        answers = theForm.querySelector('textarea').value;
+                    }
+                    let vote = {
+                        uuid: theForm.elements['uuid'].value,
+                        vote: answers
+                    }
+
+                    socket.emit('qr:poll:vote', vote, function(msg){
+                        if( msg.status === false ){
+                            addInfoMessage(msg.message);
+                        }
+                        else {
+                            addInfoMessage("Congratulations! Vote accepted", 5000, "green")
+                            document.querySelector('div#PollingDialogProgress').parentNode.classList.remove('enable');
+                        }
+                    });
+                }
+            }
+
+            function showBlockDialog(evt){
+                evt.preventDefault();
+                evt.stopPropagation();
+
+
+                let blockDialog = document.getElementById('blockDialog');
+                // Get the requestItem that is the parent of the clicked block button
+                let uuid = evt.target.closest('.requestItem').getAttribute('data-uuid');
+                socket.emit('qr:admin:userinfo', uuid, function(response){
+                    let ipDetails = blockDialog.querySelector('span.ipDetails');
+                    ipDetails.innerText = response.ip
+                    
+                    let idDetails = blockDialog.querySelector('div.idDetails');
+                    idDetails.innerHTML = '';
+                    for( let id of response.ids ) {
+                        let idDiv = document.createElement('div');
+                        idDiv.innerText = `${id.name} (${id.provider})`;
+                        idDetails.appendChild( idDiv );
+                    }
+                })
+
+                let blockUserFormUUID = blockDialog.querySelector('#blockUser').elements['uuid'];
+                blockUserFormUUID.value = uuid;
+                blockDialog.classList.add('enable');
+
+            }
+
+            function blockUser(evt) {
+                evt.preventDefault();
+
+                let uuid = evt.target.elements['uuid'].value
+                let duration = parseInt(evt.target.elements['duration'].value)
+
+                let banID = evt.target.elements['banID'].checked;
+                let banIP = evt.target.elements['banIP'].checked;
+                let reason = evt.target.elements['reason'].value;
+
+                
+                if( uuid.length > 0 ){
+                    socket.emit('qr:admin:block', uuid, {
+                        duration,
+                        banID,
+                        banIP,
+                        reason
+                    })
+                }
+
+                evt.target.closest('div#blockDialog').classList.remove('enable');
+            }
+
+            function toggleQueueAccess(response){
+                let messageBox = document.getElementById('messageBox');
+
+                if( response.status ){
+                    let q = document.getElementsByClassName('requestList')[0];
+                    
+                    if( q.childNodes.length === 1 ) {
+                        for( let r of response.data ){
+                            let item = createQueueItem(r.name, r.reason, r.uuid);
+                            q.insertBefore(item, q.lastChild);
+                        }
+                    }
+
+                    // Enable User Input
+                    let helpInputs = document.querySelectorAll('.requestHelp input');
+                    for( let helpInput of helpInputs ){
+                        helpInput.disabled = false;
+                    }
+
+                    if( response.admin ) {
+                        document.querySelector('input#configToggle').checked = false;
+                    }
+
+                }
+                else {
+                    // Password Failed
+                    addInfoMessage(response.message, 5000)
+
+                    // Remove all queue items that might exist
+                    let lists = document.getElementsByClassName('requestList')
+                    for( let list of lists ){
+                        while( list.childNodes.length > 1 ){
+                            list.removeChild(list.childNodes[0])
+                        }
+                    }
+
+                    // Disable queuing input
+                    let helpInputs = document.querySelectorAll('.requestHelp input');
+                    for( let helpInput of helpInputs ){
+                        //helpInput.disabled = true;
+                    }
+
+                }
+
+                let requestForm = document.querySelector('form.requestHelp');
+
+                adminMode = (response.admin === true );
+                if( response.admin ){
+                    let admincontrols = document.getElementsByClassName('admincontrols')
+                    for( let control of admincontrols ){
+                        control.classList.add('adminmode');
+                    }
+
+                    let items = document.getElementsByClassName('requestItem');
+                    for( let item of items ){
+                        item.classList.add('adminmode');
+                        item.addEventListener('pointerdown', downItem);
+                    }
+
+                    requestForm.classList.add('adminmode');
+                }
+                else {
+                    let admincontrols = document.getElementsByClassName('admincontrols')
+                    for( let control of admincontrols ){
+                        control.classList.remove('adminmode');
+                    }
+
+                    let items = document.getElementsByClassName('requestItem');
+                    for( let item of items ){
+                        item.classList.remove('adminmode');
+                        item.removeEventListener('pointerdown', downItem);
+                    }
+
+                    requestForm.classList.remove('adminmode');
+                }
+            }
+
+            function checkAdminPassword(evt){
+                evt.preventDefault();
+                
+                let adminElement = evt.target.elements['checkPassword'];
+                let password = adminElement.value;
+
+                adminElement.value = '';
+
+                // If you're logged in and not attempting a password
+                // then switch to my userID
+                if( loggedIn && adminElement.type === 'text') {
+                    password = userID;
+                }
+                socket.emit('qr:queue:join', qName, password, toggleQueueAccess)
+            }
+
+            function enqueue(evt){
+                evt.preventDefault();
+
+                let nameBox = evt.target.elements.namedItem('requester');
+                let reasonBox = evt.target.elements.namedItem('reason')
+                let label = evt.target.querySelector('label');
+                let button = evt.target.querySelector('button')
+
+                if(nameBox === null ) return false;
+                if( nameBox.value.trim().length > 0 )
+                {
+                    socket.emit('qr:request:enqueue', {
+                            name: nameBox.value,
+                            reason: reasonBox.value
+                        }, function(status){
+                        evt.target.elements.namedItem('requestbtn').disabled = false;
+                        reasonBox.value = '';
+                    });
+                }
+                else {
+                    evt.target.elements.namedItem('requestbtn').disabled = false;
+                }
+                
+            }
+            function deleteSpot(evt, uuid){
+                evt.preventDefault();
+                evt.stopPropagation();
+
+                socket.emit('qr:admin:delete', uuid);
+            }
+
+            function downItem(evt){
+                evt.preventDefault();
+
+                let srcItem = evt.target;
+                let destGutter = null;
+                while(!srcItem.classList.contains('requestItem')) {
+                    srcItem = srcItem.parentNode;
+                }
+
+                let gutters = document.getElementsByClassName('requestGutter');
+                let gutterEnter = function(evt){
+                    evt.target.classList.add('active');
+                    destGutter = evt.target;
+                }
+                let gutterExit = function(evt){
+                    evt.target.classList.remove('active')
+                    destGutter = null;
+                }
+                
+                let moveItem = function(evtMove){
+                    evtMove.preventDefault();
+
+                    for( let gutter of gutters ){
+                        if(srcItem.querySelector('.requestGutter') !== gutter && 
+                           srcItem.nextSibling.querySelector('.requestGutter') !== gutter)
+                        {
+                            gutter.classList.add('enable')
+                            gutter.addEventListener('pointerenter', gutterEnter);
+                            gutter.addEventListener('pointerleave', gutterExit);
+                        }
+                    }
+                }
+                let upItem = function(evtUp){
+                    evtUp.preventDefault();
+
+                    if( destGutter !== null ){
+                        srcItem.parentNode.insertBefore(srcItem, destGutter.parentNode)
+                        destGutter.classList.remove('active')
+
+                        let srcUUID = srcItem.getAttribute('data-uuid')
+                        let destUUID = destGutter.parentNode.getAttribute('data-uuid')
+                        
+                        socket.emit('qr:admin:move', srcUUID, destUUID)
+                    }
+
+                    for( let gutter of gutters ){
+                        gutter.classList.remove('enable')
+                        gutter.removeEventListener('pointerenter', gutterEnter);
+                        gutter.removeEventListener('pointerleave', gutterExit);
+
+                    }
+                    document.removeEventListener('pointermove', moveItem);
+                    document.removeEventListener('pointerup', upItem)
+
+                    destGutter = null
+
+                    return false;
+                }
+
+                document.addEventListener('pointermove', moveItem);
+                document.addEventListener('pointerup', upItem, true)
+            }
+
+            function createQueueItem(name, reason, uuid='none'){
+                let reqList = document.getElementsByClassName('requestList')[0];
+
+                let container = document.createElement('li')
+                container.classList.add('requestItem')
+                container.setAttribute('data-uuid', uuid);
+
+                let gutter = document.createElement('div');
+                gutter.classList.add('requestGutter');
+
+                let item = document.createElement('div');
+                item.classList.add('requestContent')
+
+                if( reason !== null && reason.length > 0 ){
+                    let requestExpander = document.createElement('input');
+                    requestExpander.setAttribute('type', 'checkbox');
+                    requestExpander.classList.add('requestExpander');
+                    requestExpander.id = `requestExpander-${uuid}`;
+                    item.appendChild(requestExpander);
+                }
+
+                let label = document.createElement('label');
+                label.classList.add('requestHeader');
+                label.setAttribute('for', `requestExpander-${uuid}`)
+                item.appendChild(label);
+
+                let dragHandle = document.createElement('span');
+                dragHandle.classList.add('dragHandle');
+                dragHandle.classList.add('admincontrols');
+                dragHandle.innerHTML = '&equiv;';
+
+                let studentName = document.createElement('div')
+                studentName.classList.add('studentName')
+                studentName.innerText = name;
+
+                let blockBtn = document.createElement('span');
+                blockBtn.classList.add('blockbtn');
+                blockBtn.classList.add('admincontrols')
+                blockBtn.innerHTML = '&#x1f6ab;';
+                blockBtn.addEventListener('click', function(evt){
+                    showBlockDialog(evt);
+                })
+                
+                let closeBtn = document.createElement('span');
+                closeBtn.classList.add('deletebtn');
+                closeBtn.classList.add('admincontrols')
+                closeBtn.innerText = 'X';
+                closeBtn.addEventListener('click', function(evt){
+                    deleteSpot(evt, uuid);
+                })
+
+                label.appendChild(dragHandle);
+                label.appendChild(studentName);
+                label.appendChild(blockBtn);
+                label.appendChild(closeBtn);
+
+                let requestReason = document.createElement('div');
+                requestReason.classList.add('additionalInfo');
+                requestReason.innerText = reason;
+                item.appendChild(requestReason);
+
+                container.appendChild(gutter);
+                container.appendChild(item);
+                
+                if(adminMode){
+                    container.addEventListener('pointerdown', downItem);
+                    container.classList.add('adminmode')
+                    closeBtn.classList.add('adminmode');
+                    blockBtn.classList.add('adminmode')
+                    dragHandle.classList.add('adminmode');
+
+                }
+
+                return container;
+            }
+
+            socket.on('qr:request:enqueue', function(uuid, data){
+                let reqList = document.getElementsByClassName('requestList')[0];
+                let item = createQueueItem(data.name, data.reason, uuid);
+                reqList.insertBefore(item,reqList.lastChild);
+            })
+            socket.on('qr:admin:delete', function(uuid){
+                let reqList = document.getElementsByClassName('requestList')[0];
+                for( let spot = 0; spot < reqList.children.length; spot++ ){
+                    if( reqList.children[spot].getAttribute('data-uuid') === uuid){
+                        reqList.removeChild(reqList.children[spot]);
+                        break;
+                    }
+                }
+            })
+            socket.on('qr:admin:move', function(uuid, beforeThisUUID){
+                let list = document.getElementsByClassName('requestList')[0]
+                let item = list.querySelector(`li.requestItem[data-uuid='${uuid}'`)
+                let beforeThisItem = list.querySelector(`li.requestItem[data-uuid='${beforeThisUUID}'`)
+                if( beforeThisUUID === null ){
+                    beforeThisItem = list.lastChild;
+                }
+                list.insertBefore(item, beforeThisItem);
+            })
+
+            socket.on('qr:admin:block', function(msg){
+                blockedUntil = msg.timeUntil - Date.now();
+                blockedUntil = Math.ceil(blockedUntil / 1000 / 60);
+
+
+                // Time from server has passed already
+                if( blockedUntil <= 0 ){
+                    return;
+                }
+
+                // Make sure that we don't have two timers running
+                if( blockedTimer !== null ){ return; }
+
+                let blockReason = (msg.reason) ? `<div>${msg.reason}</div>` : '';
+                let blockedMessage = `You may submit requests in ${blockedUntil} minute`
+                if( blockedUntil !== 1 ){
+                    blockedMessage += 's';
+                }
+                blockedMessage += '.';
+
+                let msgBlock = document.getElementById('messageBox');
+                let blockedMsg = `<div>This client has been blocked.</div>
+                                  <div class='blockTime'>${blockedMessage}</div>
+                                  ${blockReason}`
+
+                let blockedDiv = document.createElement('div');
+                blockedDiv.classList.add('infoMessage')
+                blockedDiv.innerHTML = blockedMsg;
+                msgBlock.appendChild(blockedDiv);
+
+                // Disable User Input
+                let helpInputs = document.querySelectorAll('.requestHelp input');
+                for( let helpInput of helpInputs ){
+                    helpInput.disabled = true;
+                }
+
+                blockedTimer = setInterval(function() {
+                    blockedUntil -= 1;
+                    if( blockedUntil <= 0 ){
+                        clearInterval(blockedTimer);
+                        blockedTimer = null;
+                        msgBlock.removeChild(blockedDiv);
+
+                        // re-enable UI
+                        for( let helpInput of helpInputs ){
+                            helpInput.disabled = false;
+                        }
+                    }
+                    else {
+                        let msgTime = blockedDiv.querySelector('.blockTime')
+                        let blockedMessage = `You may submit requests in ${blockedUntil} minute`
+                        if( blockedUntil !== 1 ){
+                            blockedMessage += 's';
+                        }
+                        blockedMessage += '.'
+                        msgTime.innerText = blockedMessage;
+                    }
+                }, 1000*60)
+            })
+
+            socket.on('qr:message:info', function(msg){
+                let color = 'yellow';
+                if( msg.status === 'error' ){
+                    color = 'red';
+                }
+
+                addInfoMessage(msg.message, msg.duration, color)
+            })
+
+
+            socket.on( 'qr:poll:update', function( msg ){
+                let pollingDialog = document.querySelector('div#PollingDialogProgress')
+                
+                if( Array.isArray(msg)){
+                    let gAnswers = pollingDialog.querySelector('div.gatheredAnswers');
+
+                    for(let count = gAnswers.childElementCount-1; count < msg.length; count += 1 ){
+                        let ans = document.createElement('div');
+                        ans.innerText = msg[count];
+
+                        gAnswers.appendChild(ans);
+                    }
+
+                }
+                else {
+                    for( let count in msg ){
+                        let countSpan = pollingDialog.querySelector('span.vote_'+count);
+                        if( countSpan ){
+                            countSpan.innerText = '('+msg[count]+')';
+                        }
+                    }
+                }
+            })
+
+            socket.on('qr:poll:end', function(msg){
+                if( pollActive === null || pollStarted ){
+                    return;
+                }
+
+                let pollingDialog = document.querySelector('div#PollingDialogProgress');
+                let question = pollingDialog.querySelector('div.pollQuestion')
+                let answers = pollingDialog.querySelector('div.answers')
+                let uuid = pollingDialog.querySelector('input[name="uuid"]')
+
+                pollingDialog.parentNode.classList.remove('enable');
+                question.innerHTML = '';
+                answers.innerHTML = '';
+                uuid.value = '';
+
+                pollActive = null;
+                pollStarted = null;
+
+
+                addInfoMessage('Polling has ended', 2500, "green");
+            })
+
+            socket.on('qr:poll:start', function(msg){
+                
+                if( pollActive !== null ){
+                    return;
+                }
+
+                let pollingDialog = document.querySelector('div#PollingDialogProgress')
+                let question = pollingDialog.querySelector('div.pollQuestion')
+                let answers = pollingDialog.querySelector('div.answers')
+                let uuid = pollingDialog.querySelector('input[name="uuid"]')
+
+                answers.innerHTML = '';
+                uuid.value = msg.id;
+                question.innerText = msg.question;
+                pollActive = msg.id;
+                
+                if( msg.answers.length === 0 ){
+                    ansDiv = document.createElement('textarea')
+                    ansDiv.style.flexShrink = '1';
+
+                    ansDiv.style.minWidth = '100%';
+                    ansDiv.style.padding = '1em';
+                    answers.appendChild(ansDiv);
+                    ansDiv.focus();
+
+                    if( pollStarted ) {
+                        gatheredAnswers = document.createElement('div');
+                        gatheredAnswers.classList.add('gatheredAnswers');
+
+                        gaTitle = document.createElement('div');
+                        gaTitle.innerText = "Gathered Answers:";
+
+                        gatheredAnswers.appendChild(gaTitle);
+                        answers.appendChild(gatheredAnswers);
+                    }
+                }
+
+                let answerNum = 1;
+                for( let answer of msg.answers){
+                    let ansDiv = document.createElement('label');
+                    let selection = document.createElement('input')
+                    
+                    selection.name= answerNum;
+                    selection.value = answerNum;
+                    answerNum += 1;
+
+                    if( msg.multipleAnswers ) {
+                        selection.type='checkbox'    
+                    }
+                    else {
+                        selection.type='radio';
+                        selection.name='1';
+                    }
+
+
+                    let ans = document.createElement('span')
+                    ans.innerText = answer;
+                    
+                    ansDiv.appendChild(selection);
+                    ansDiv.appendChild(ans);
+                    if( pollStarted !== null ){
+                        let countDiv = document.createElement('span');
+                        countDiv.classList.add('vote_'+(answerNum - 1))
+                        countDiv.innerText = '(0)';
+                        ansDiv.appendChild(countDiv);
+                    }
+
+                    answers.appendChild(ansDiv);
+
+                }
+
+                pollingDialog.querySelector('input[name="votebtn"]').style.display = 'inline-block';
+                if( adminMode ){
+                    pollingDialog.querySelector('input[name="endpollbtn"]').style.display = 'inline-block';
+                }
+
+                pollingDialog.parentNode.classList.add('enable')
+                document.querySelector('div#PollingDialog').parentNode.classList.remove('enable')      
+            })
+
+            window.onload = init;

@@ -1,0 +1,619 @@
+include nav.pug
+
+
+doctype html
+html
+    head
+        meta(charset='UTF-8')
+        meta(name='viewport' content='width=device-width, initial-scale=1')
+
+        title Queue Administration
+
+        +navStyle
+
+        style(type='text/css').
+
+            :root { 
+                 --primary-bgcolor: rgba(32, 80, 203, 1);
+                --primary-fgcolor: rgba(255,255,255, 0.8);
+                --list-separator-color: rgba(33, 33, 69, 0.2);
+                --dropzone-color: rgba(29, 118, 201, 1);
+            }
+            *{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            header{
+                display: flex;
+                position: relative;
+                align-items: center;
+
+                padding: 0.5em;
+                font-size: 1.5rem;
+                font-weight: bold;
+
+                color: white;
+                background-color: rgba(32, 80, 203, 0.7);
+                margin-bottom: 0.5em;
+            }
+            header > span {
+                flex-grow: 1;
+            }
+            div.subheader {
+                color: white;
+                background-color: rgba(32, 80, 203, 0.7);
+                padding: 0.5em;
+                font-size: 1.2rem;
+                margin-top: 0.5em;
+                margin-bottom: 0.5em;
+            }
+           
+            div.passwordBox {
+                display: inline-flex;
+                flex-direction: column;
+                padding: 0.5em;
+            }  
+            
+            form {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 0.5em;
+            }
+            form > input[type='submit'] {
+                margin-top: 1ch;
+                min-width: 80%;
+                min-height: 40px;
+                font-size: 1.15rem;
+            }
+            div.passwords {
+                display: flex;
+                position: relative;
+                margin-right:5px;
+                margin-top: 0.5rem;
+                border: 1px solid black;
+                flex-grow: 1;
+            }
+            div.passwords > input {
+                flex-grow: 2;
+                border: 0;
+                outline: 0;
+                padding: 5px;
+                z-index: 1;
+                background:transparent;
+            }
+            div.passwords > input:focus + label,
+            div.passwords > input:not(:placeholder-shown) + label {
+                font-size: 0.85rem;
+                transform: translate( 1ch, -1.75rem);
+                color: black;
+                z-index: 2;
+                background: white;
+            }
+            div.passwords > label {
+                color: gray;
+                position: absolute;
+                left: 0;
+                top: 50%;
+                opacity: 1;
+                padding: 2px;
+                transform: translate(1ch, -50%);
+
+                transition: font-size 250ms ease-in-out, transform 250ms ease-in-out, color 250ms ease-in-out;
+            }
+            div.passwords > span.eye{
+                display: inline-block;
+                font-size: 1.2rem;
+                cursor: pointer;
+                padding: 5px;
+            }
+            button{
+                padding: 4px;
+                padding-left: 2px;
+                padding-right: 2px;
+            }
+
+            div.blockedIPs{
+                display: grid;
+                grid-template-columns: minmax(42px, 3em) repeat(2,1fr);
+
+                margin: 1em;
+            }
+            div.blockedIPs > div.tableHeader {
+                display: flex;
+                font-weight: bold;
+                margin-bottom: 1em;
+            }
+
+            div.access-services {
+                display: flex;
+                flex-wrap: wrap;
+                min-width: 80vw;
+                justify-content: center;
+                align-items: center;
+            }
+            div.access-services > select{                
+                background-color: transparent;
+                flex-basis: 25%;            
+                font-size: 1.15rem;
+                border: 1px solid black;
+                border-radius: 5px;
+                margin: 5px;
+                margin-bottom: 0;
+            }
+
+            div.access-list {
+                display: grid;
+                width: 80vw;
+                padding: 5px;
+                gap: 1em;
+                grid-template-columns: 3ch 1fr 1fr 4fr;
+            }
+            div.access-list > button[type='submit'] {
+                color: red;
+                background-color: lightgray;
+                aspect-ratio: 1;
+                padding: 0;
+                cursor: pointer;
+            }
+            div.access-list > div {
+                display: flex;
+                align-items: center;
+            }
+            div.access-list > div:nth-child(4n + 2),
+            div.access-list > div:nth-child(4n+3) {
+                text-transform: capitalize;
+            }
+
+            /* Toggle Switches */
+            label.toggle {
+                cursor: pointer;
+                margin-right: 0.25em;
+            }
+            div.slider {
+                position: relative;
+                display: inline-block;
+
+                border: 1px solid black;
+                border-radius: 5px;
+
+                background-color: hsl(360,100%, 75%);
+                max-width: 12ch;
+                padding: 0.25em;
+                white-space: nowrap;
+                overflow: hidden;
+
+                transition: background-color 250ms ease-in-out;
+            }
+            div.slider::before {
+                content: "";
+
+                display: inline-block;
+                position: absolute;
+                top:50%;
+                left: 10%;
+                transform: translateY(-50%);
+                transition: left 350ms ease-in-out;
+
+                background-color: hsla(118,100%, 3%, 0.75);
+                border-radius: 5px;
+                width: 1em;
+                height:80%;
+            }
+            div.slider > span.on{
+                display: inline-block;
+                transform: translateX(-110%);
+                transition: transform 250ms ease-in-out;
+            }
+            div.slider > span.off{
+                display: inline-block;
+                margin-left: -2.5em;
+                transition: transform 250ms ease-in-out;
+            }
+
+            label.toggle > input{
+                display: none;
+            }
+
+            label.toggle > input:checked + div.slider {
+                background-color: hsl(118, 100%, 35%);
+            }
+            label.toggle > input:checked + div.slider::before {
+                left:80%;                left: 5%;
+
+            }
+            label.toggle > input:checked + div.slider > span.on {
+                transform: translateX(0%);
+            }
+            label.toggle > input:checked + div.slider > span.off {
+                transform: translateX(110%);
+            }
+
+
+            div.signinBtns {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+
+                border-top: 2px solid black;
+                background-color: white;
+            }
+
+            form#adminPassword {
+                display: none;
+            }
+
+
+            button.slider{
+                -webkit-appearance: none;
+
+                position: relative;
+                padding: 0 1em;
+                border: 1px solid black;
+                
+                font-size: 1.5rem;
+                background-color: red;
+                color: white;
+
+                overflow: hidden;
+            }
+            button.slider::after{
+                position: absolute;
+                content: "";
+
+                right: 85%;
+                top: 5%;
+                bottom: 5%;
+                width: 10%;
+                background-color: black;
+                transition: right 250ms ease-in-out;
+            }
+            button.slider > .off {
+                pointer-events: none;
+            }
+            button.slider > .on {
+                position: absolute;
+
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+                pointer-events: none;
+                
+                background-color: green;
+                transition: transform 250ms ease-in-out;
+            }
+            button.slider.on::after {
+                right: 5%;
+            }
+            button.slider.on > .on {
+                transform: translateX(0%);
+            }
+
+    body
+
+        +signup 
+        +configMenu 
+
+        header 
+            span= `Admin Page -- ${queueID}`
+
+        div
+            span URL:
+            a(href=`${path}${baseURL}/${queueID}`)= `${path}${baseURL}/${queueID}`
+        div
+            span Administration URL:
+            a(href=`${path}${baseURL}/${queueID}/admin`)= `${path}${baseURL}/${queueID}/admin` 
+
+        if( permissions.admin === false )
+            form(id='accessCode' method='POST')
+                input(name='token' type='hidden' value=`token`)
+                input(name='access' type='password')
+                input(name='mode' value='html' type='hidden')
+                input(type='submit' value='Gain Admin Access')
+
+            +configMenuScript
+            script(type='text/javascript').
+                function enableQueue(evt){
+                    evt.preventDefault();
+                }
+                document.getElementById('accessCode').elements['access'].focus();
+        else 
+            div(class='subheader') 
+                span Access Control
+                form(onsubmit="enableQueue(event)" style='display:inline-block;margin-left:auto;')
+                    input(type='hidden' name='token' value=`${token}`)
+                    //- OS X buttons don't focus, so we force it prior to form submission
+                    button(class='slider' class=(!config.private && 'on') type='submit' onclick='event.target.focus();' name='private' value=`${!config.private}`)
+                        span(class='off') Private 
+                        span(class='on') Public
+                div Private queues require access passwords
+            
+            div 
+                span Non-Authenticated
+                
+            div(class='passwordBox')
+                form(method='POST' onsubmit='setAccessPassword(event);')
+                    input(type='hidden' name='token' value=`${token}`)
+                    input(type='hidden' name='action' value='access')
+                    div(class='passwords')
+                        input( id='accesspassword' name='access' type='password' placeholder=' ')
+                        label( for='accesspassword') Access Password
+                        span(class='eye') &#x1F441;
+                    input(type='submit' value='Set')
+            div(class='passwordBox')
+                form(method='POST' onsubmit='setAccessPassword(event);')
+                    input(type='hidden' name='token' value=`${token}`)
+                    input(type='hidden' name='action' value='admin')
+                    div(class='passwords')
+                        input(id='adminpassword' name='access' type='password' placeholder=' ')
+                        label(for='adminpassword') Admin Password
+                        span(class='eye') &#x1F441;
+                    input(type='submit' value='Set')
+            
+            div Authenticated
+            
+            
+            form(method='POST' onsubmit='setAccessPassword(event);')
+                input(type='hidden' name='token' value=`${token}`)
+                div(class='access-services')
+                    select(name='service' )
+                        option(value='' disabled selected hidden) Select Provider   
+                        each role, service in servicePermissions['admin']
+                            option(value=`${service}`)= service.charAt(0).toUpperCase()+service.slice(1)
+                        optgroup(label='__________' style='margin:0; padding:0;font-size:10px;')
+                        option(value='all' ) All
+
+                    select(name='action')
+                        option(value='' disabled selected hidden) Select Role
+                        option(value='access') Access 
+                        option(value='admin') Admin
+                    div(class='passwords')
+                        input(type='text' placeholder=' ' name='access')
+                        label Username (* = wildcard)
+                input(type='submit' value='Add')
+
+            form(method='post' onsubmit='deleteAccess(event);')
+                input(type='hidden' name='token' value=`${token}`)
+                input(type='hidden' name='action' value='deleteaccess')
+                div(class='access-list')
+                    div &nbsp;
+                    div Service 
+                    div Role 
+                    div Username
+                    each service, role in servicePermissions
+                        each username, provider in service
+                            each name, uname in username
+                                button(type='submit' name='access' value=`${provider}:${role}:${uname}`) &#10006;
+                                div(style='text-transform:capitalize;')= provider 
+                                div(style='text-transform:capitalize;')= role 
+                                div= uname
+                
+        
+            div(class='subheader') Blocked IPs
+
+            form(method='post' onsubmit='removeBlocked(event);')
+                input(type='hidden' name='token' value=`${token}`)
+                input(type='hidden' name='action' value='deleteblock')
+                div(class='blockedIPs')
+                    div(class='tableHeader') 
+                    div(class='tableHeader') IP
+                    div(class='tableHeader') Until
+                    div(class='tableHeader') Reason
+                    each key in Object.keys(blocked)
+                            button(type='submit' name='ip' value=`${key}`) X
+                            div= key
+                            div= new Date(blocked[key].timeUntil).toLocaleString()
+                            div= blocked[key].reason
+            
+            +configMenuScript
+            script(type='text/javascript').
+
+                let tokenElements = [];
+                function init() {          
+                    // Enable password show/hide
+                    let eyes = document.getElementsByClassName('eye');
+                    for( let eye of eyes ){
+                        eye.addEventListener('click', function(evt){
+                            let input = evt.target.previousSibling.previousSibling;
+                            if( input.getAttribute('type') === 'password'){
+                                input.setAttribute('type', 'text')
+                            }
+                            else{
+                                input.setAttribute('type', 'password')
+                            }
+                        })
+                    }
+
+                    tokenElements = document.querySelectorAll('form input[name="token"')
+                }
+
+                function removeBlocked(evt){
+                    evt.preventDefault();
+                    let ip = evt.target.elements['ip'].value;
+                    let token = evt.target.elements['token'].value
+                    let action = evt.target.elements['action'].value
+                    let postData = {
+                        ip,
+                        token,
+                        action
+                    }
+
+                    let URL = window.location.href;
+                    fetch(URL, {
+                        method: 'POST',
+                        headers : {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(postData)
+                    }).then( function(response) {
+                        response.json().then(function(data){
+                            if( data.status === true ){
+                                // remove the row of the blocked IP
+                                let element = evt.target.elements['ip']
+                                for( let i = 0; i < 4; i++ ) {
+                                    let next = element.nextElementSibling;
+                                    element.parentNode.removeChild(element);
+                                    element = next;
+                                }
+                            }
+                        }).catch(function(err){
+                            console.log('Error:', err.toString());
+                        })
+                    }).catch( function(err){
+                        console.log("Error:", err.toString())
+                    })
+
+                }
+
+                function deleteAccess(evt){
+                    evt.preventDefault();
+                    
+                    let URL = window.location.href;
+                    if( !URL.endsWith('/admin')){
+                        URL += '/admin';
+                    }
+                    
+                    let element = document.activeElement;
+                    let action = evt.target.elements['action'].value;
+                    let token = evt.target.elements["token"].value;
+                    let postData = {
+                        action,
+                        token,
+                        access: element.value
+                    }
+                  
+                    fetch(URL, {
+                        method: 'POST', 
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(postData)
+                    }).then( function(response) {
+                        response.json().then(function(data) {
+                            if( data.status === true ){
+                                for( let i = 0; i < 4; i++ ) {
+                                    let next = element.nextElementSibling;
+                                    element.parentNode.removeChild(element);
+                                    element = next;
+                                }
+
+                                for( element of tokenElements ){
+                                    element.value = data.token;
+                                }
+                            }
+                        }).catch(function(err) {
+                            console.log('Error: ', err.toString());
+                        })
+                    }).catch(function(err){
+                        console.log( 'Error: ', err.toString());
+                    })
+                    
+                }
+
+                function setAccessPassword(evt) {
+                    evt.preventDefault();
+
+                    let URL = window.location.href;
+                    if( !URL.endsWith('/admin')){
+                        URL += '/admin';
+                    }
+
+                    let token = evt.target.elements['token'].value
+                    let access = evt.target.elements['access'].value;
+                    let action = evt.target.elements['action'].value
+                    let service = (evt.target.elements['service']) ? evt.target.elements['service'].value : "";
+
+                    let postData = {
+                        service,
+                        action,
+                        access,
+                        token
+                    }
+
+                    fetch(URL, {
+                        method: 'POST',
+                        headers : {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(postData)
+                    }).then( function(response) {
+                        response.json().then(function(data){
+                            if( data.status === true ){
+                                for( element of tokenElements ){
+                                    element.value = data.token;
+                                }
+
+                                if( service !== ''  ) {
+                                    let fieldOrder = [service, action, access]
+                                    let accessTable = document.querySelector('div.access-list');
+                                    
+                                    let deleteBtn = document.createElement('button');
+                                    deleteBtn.type = 'submit'
+                                    deleteBtn.name = 'access'
+                                    deleteBtn.value = `${service}:${action}:${access}`;
+                                    deleteBtn.innerHTML = '&#10006;';
+                                    accessTable.appendChild(deleteBtn);
+
+                                    for( let field of fieldOrder ){
+                                        let div = document.createElement('div');
+                                        div.innerText = field 
+                                        accessTable.appendChild(div)
+                                    }
+                                }
+                                evt.target.elements['access'].value = '';
+
+
+                            }
+                        }).catch(function(err){
+                            console.log('Error:', err.toString());
+                        })
+                    }).catch( function(err){
+                        console.log("Error:", err.toString())
+                    })
+                }
+
+                function enableQueue(evt)
+                {
+                    evt.preventDefault();
+
+                    let URL = window.location.href;
+                    if( !URL.endsWith('/admin')){
+                        URL += '/admin';
+                    }
+
+                    let private = document.activeElement.value === 'true'
+                    let token = evt.target.elements['token'].value;
+                    let postData = {
+                        private,
+                        token 
+                    }
+
+                    fetch(URL, {
+                        method: 'POST',
+                        headers : {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(postData)
+                    }).then( function(response) {
+                        response.json().then(function(data){
+                            if( data.status === true ){
+                                for( element of tokenElements ){
+                                    element.value = data.token;
+                                }
+                                document.activeElement.classList.toggle('on');
+                                document.activeElement.value = document.activeElement.classList.contains('on');
+
+                            }
+                        }).catch(function(err){
+                            console.log('Error:', err.toString());
+                        })
+                    }).catch( function(err){
+                        console.log("Error:", err.toString())
+                    })
+                }
+
+                window.onload = init;
